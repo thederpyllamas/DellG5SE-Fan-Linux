@@ -4,21 +4,16 @@
 #include <filesystem>
 #include <fcntl.h>
 #include <signal.h>
-
 namespace fs = std::filesystem;
-
 // Paths definition.
 #define ECio "/sys/kernel/debug/ec/ec0/io"
 #define hwmon "/sys/class/hwmon"
 //#define temp_thresholds_address "/tmp/._dellfan_tt_ptr"
-
-
 // Byte offsets
 #define ManualECMode_cpu 147 // 0x93
 #define ManualECMode_gpu 150 // 0x96
 #define GPUaddr 151 // 0x97
 #define CPUaddr 148 //0x94
-
 // Hex fan speeds (defaults)
 #define ZERO 	255 	// 0xFF -- 0 	RPM		|	0 
 #define SLOW 	245 	// 0xF5 -- 2000	RPM		|	10
@@ -27,8 +22,6 @@ namespace fs = std::filesystem;
 #define FAST 	122 	// 0x7A -- 4000	RPM		|	133
 #define FASTER 	102 	// 0x66 -- 4800	RPM		|	153
 #define BOOST 	91 		// 0x5B -- 5400	RPM		|	164
-
-
 /////////////////////////////////
 // Global variable initialisation
 /////////////////////////////////
@@ -37,17 +30,14 @@ bool verbose = false;
 constexpr uint8_t hex_fan_speeds[] = {ZERO, SLOW, MEDIUM, NORMAL, FAST, FASTER, BOOST};
 constexpr uint rpm_fan_speeds[] = {0,2000,2500,3000,4000, 4800,5400};
 constexpr uint n_thresholds = sizeof(hex_fan_speeds) / sizeof(uint8_t);
-
 //Temperature thresholds (for fan curve)
 unsigned int mou = 2;
 uint temp_thresholds[n_thresholds-1] = {45, 50, 55, 60, 70, 80}; // of size n_threshold - 1
-
 // harware variables
 uint cpu_temp;
 uint gpu_temp;
 uint cpu_fan;
 uint gpu_fan;
-
 // Dellsmm pathes
 std::string GPU_path;
 std::string CPU_path;
@@ -56,8 +46,6 @@ std::string GPU_fan_path;
 std::string dellsmm="";
 // default timer.
 uint timer=2;
-
-
 //  Gets the needed paths.
 void Hwmon_get()
 {
@@ -72,14 +60,12 @@ void Hwmon_get()
 			if (verbose)
 				std::cout << "Hwmon dell smm path : " <<  dellsmm << "\n";
             for (const auto & file : fs::directory_iterator(dellsmm)){
-
                 std::ifstream a;
                 std::string file_path = file.path().string();
                 a.open(file_path);
                 std::string sensor_name;
                 a >> sensor_name;
                 a.close();
-
                 if (sensor_name == "GPU"){
                     GPU_path = file_path;
                     GPU_path.replace(GPU_path.length()-5,5,"input");
@@ -120,10 +106,10 @@ void Hwmon_get()
     }
     if (dellsmm == ""){
         std::cout << "Cannot find Dell-smm-hwmon. Try 'modprobe dell-smm-hwmon restricted=0 ignore_dmi=1'. " << std::endl;
+        std::cout << "Cannot find Dell-smm-hwmon. Try 'modprobe dell-smm-hwmon restricted=0 ignore_dmi=1'. " << "\n";
         exit(EXIT_FAILURE);
     }
 };
-
 // Updates the thermals and fan variables.
 void update_vars()
 {
@@ -141,7 +127,6 @@ void update_vars()
     a >> gpu_fan;
     a.close();
 };
-
 // Set cpu fans to selected speed. Input should be in the set {0,128,256}.
 void set_cpu_fan_smm(int left)
 {
@@ -164,16 +149,12 @@ void set_gpu_fan_smm(int right)
     pwm << r;
     pwm.close();
 };
-
-
 inline void write_to_ec(int byte_offset, uint8_t value){
     int fd = open(ECio, O_WRONLY);
 	int error = lseek(fd, byte_offset, SEEK_SET);
 	if (error == byte_offset)
 		write(fd, &value, 1);
 }
-
-
 void manual_fan_mode(bool on)
 {
     if(on){
@@ -193,8 +174,6 @@ void manual_fan_mode(bool on)
     }
     
 }
-
-
 // Checks if launched with enough permissions, and requirements are filled.
 void permissions_requirements_check()
 {
@@ -210,7 +189,6 @@ void permissions_requirements_check()
         exit(EXIT_FAILURE);
     }
 };
-
 inline void set_cpu_fan(int speed){
     write_to_ec(CPUaddr, speed);
 };
@@ -218,23 +196,21 @@ inline void set_gpu_fan(int speed)
 {
     write_to_ec(GPUaddr, speed);
 };
-
 // Converts hex input to the EC format and limits the max fan speed to boost speed (5400 RPM).
 uint8_t hex_to_EC(uint8_t hex){
     return std::min(std::max(255-hex, 91),255);
 };
-
 // Prints a status update.
 void print_status()
 {
     std::cout << "Current fan speeds : " << cpu_fan << " RPM and " << gpu_fan << " RPM.      " << std::endl;
     std::cout << "CPU and GPU temperatures : " << cpu_temp/1000 << "°C and " << gpu_temp/1000 << "°C.  " << std::endl;
+    std::cout << "Current fan speeds : " << cpu_fan << " RPM and " << gpu_fan << " RPM." << "\n";
+    std::cout << "CPU and GPU temperatures : " << cpu_temp/1000 << "°C and " << gpu_temp/1000 << "°C." << "\n";
     std::cout << "\033[2F";
     if (verbose) std::cout << "\033[1F";
 };
-
 inline uint d(int a, int b) {return std::abs(b-a);}
-
 inline int fan_curve(uint current_temp, uint current_fan){
 	uint i = 0;
 	// sets i such that : temp_thresholds[i-1] < current_temp < temp_thresholds[i], which we want at speed rpm_fan_speed[i].
@@ -259,8 +235,9 @@ inline void fan_update(){
     if (verbose)
     {
         std::cout <<"CPU and GPU fans update : "<<  cpu_update <<" and "<< gpu_update << ".   "<<std::endl; 
+        std::cout <<"CPU and GPU fans update : "<<  cpu_update <<" and "<< gpu_update << "." << "\n"; 
     }
-    
+
 }
 void usage(char* prog_name, int status){
     printf("Usage :\n");
@@ -280,21 +257,16 @@ void usage(char* prog_name, int status){
     printf(" -v, --verbose          Prints loop fan updates. -1 means no fan update made.\n");
     exit(status);
 }
-
-
 void exit_handler(int s){
     // Formating.
     std::cout << "\n\n";
     if (verbose) std::cout << std::endl;
-
     // Gives control to the BIOS.
     printf("Exit requested. (Caught signal %d)\n", s);
     manual_fan_mode(false);
 	
     exit(s);
 }
-
-
 inline void _timer(int i, int argc, char* argv[]){
 	if (argc < i+1)
 	{
@@ -329,6 +301,7 @@ inline void _set(int i, int argc, char* argv[]) {
 		right = std::stoi(argv[i+2]);
 	set_gpu_fan(hex_to_EC(right));
 	std::cout << "Set fans to "<< (int)(left) <<" and " << (int)(right) << ". Be careful, manual fan mode is on."<< std::endl;
+	std::cout << "Set fans to "<< (int)(left) <<" and " << (int)(right) << ". Be careful, manual fan mode is on."<< "\n";
 	exit(EXIT_SUCCESS);
 }
 inline void _boost(){
@@ -337,6 +310,7 @@ inline void _boost(){
 	set_gpu_fan(BOOST);
 	set_cpu_fan(BOOST);
 	printf("Boost speed. Be carefull, manual fan mode is on.");
+	printf("Boost speed. Be careful, manual fan mode is on.\n");
 	exit(EXIT_SUCCESS);
 }
 inline void _restore(){
@@ -347,8 +321,6 @@ inline void _manual(){
 	permissions_requirements_check();
 	manual_fan_mode(true);
 }
-
-
 inline bool argument_parser(int argc, char* argv[]){ // returns true if loop has to be made
 	bool loop = false;
 	if (argc < 2)
@@ -391,11 +363,9 @@ inline bool argument_parser(int argc, char* argv[]){ // returns true if loop has
 		{
 			_update_thresholds(i, argc, argv);
 		}
-
     }
 	return loop;
 }
-
 int main(int argc, char* argv[])
 {
     if (argument_parser(argc, argv)){ // true if the loop argument is send
@@ -403,7 +373,6 @@ int main(int argc, char* argv[])
 		// Set fans to auto once interrupt signal is sent.
 		signal(SIGINT,exit_handler);
 		signal(SIGTERM,exit_handler);
-
 		// Get hwmon variables
 		Hwmon_get();
 		if(verbose) std::cout << "Temperature threshold pointer (uint): " << &temp_thresholds << "\n";
@@ -412,7 +381,6 @@ int main(int argc, char* argv[])
 		sleep(1); // May not be needed.
 		set_cpu_fan(SLOW);
 		set_gpu_fan(SLOW);
-
 		// Fan update loop
 		while (true)
 		{
@@ -428,4 +396,3 @@ int main(int argc, char* argv[])
 	}
     return EXIT_FAILURE;
 }
-
